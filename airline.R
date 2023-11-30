@@ -332,7 +332,7 @@ ggplot(data = rf_confusion_data, aes(x = Reference, y = Prediction, fill = Freq)
 
 
 
-#===============================Neuronal net ==========================================
+#===============================XGB  ==========================================
 dtrain <- xgb.DMatrix(data = as.matrix(train_norm_df[-which(names(train_norm_df) == "satisfaction_satisfied")]), label = as.numeric(train_norm_df$satisfaction_satisfied) - 1)
 dvalid <- xgb.DMatrix(data = as.matrix(valid_norm_df[-which(names(valid_norm_df) == "satisfaction_satisfied")]), label = as.numeric(valid_norm_df$satisfaction_satisfied) - 1)
 
@@ -372,9 +372,6 @@ ggplot(data = xgb_confusion_data, aes(x = Reference, y = Prediction, fill = Freq
   labs(title = "Confusion Matrix for XGBoost Model", x = "Actual", y = "Predicted") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-
-
-
 
 #===============================ACC  ==========================================
 accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
@@ -423,3 +420,29 @@ importance_matrix <- xgb.importance(feature_names = colnames(train_norm_df[-whic
 print(importance_matrix)
 
 xgb.plot.importance(importance_matrix)
+##=============================== feature  ==========================================
+#F1
+calculate_metrics <- function(actual, predicted) {
+  cm <- confusionMatrix(as.factor(predicted), as.factor(actual))
+  sensitivity <- cm$byClass["Sensitivity"]
+  ppv <- cm$byClass["Pos Pred Value"]
+  f1 <- ifelse(is.na(sensitivity) || is.na(ppv) || (sensitivity + ppv) == 0, NA, 2 * sensitivity * ppv / (sensitivity + ppv))
+  return(list(f1 = f1, recall = sensitivity, precision = ppv))
+}
+
+
+metrics_logistic <- calculate_metrics(valid_norm_df$satisfaction_satisfied, valid_pred_class)
+print(paste("Logistic Regression - F1 Score:", metrics_logistic$f1))
+
+metrics_knn <- calculate_metrics(valid_norm_df$satisfaction_satisfied, as.factor(valid_pred_knn))
+print(paste("KNN - F1 Score:", metrics_knn$f1))
+
+metrics_dt <- calculate_metrics(valid_norm_df$satisfaction_satisfied, as.factor(valid_pred_dt))
+print(paste("Decision Tree - F1 Score:", metrics_dt$f1))
+
+metrics_rf <- calculate_metrics(valid_norm_df$satisfaction_satisfied, as.factor(rf_predictions))
+print(paste("Random Forest - F1 Score:", metrics_rf$f1))
+
+metrics_xgb <- calculate_metrics(valid_norm_df$satisfaction_satisfied, as.factor(xgb_pred_class))
+print(paste("XGBoost - F1 Score:", metrics_xgb$f1))
+
